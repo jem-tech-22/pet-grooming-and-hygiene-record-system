@@ -24,13 +24,13 @@ class PetManager:
 		return pet
 
 	def get_all_pets(self):
-		"""Return all pets as a list of Pet objects."""
+		"""Return all pets as a list of Pet objects sorted alphabetically by name."""
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
 			SELECT id, name, species, breed, age, owner, created_at
 			FROM pets
-			ORDER BY id
+			ORDER BY name COLLATE NOCASE ASC
 			"""
 		)
 		return [self._row_to_pet(row) for row in cursor.fetchall()]
@@ -74,7 +74,7 @@ class PetManager:
 		return cursor.rowcount > 0
 
 	def search_pets(self, search_term):
-		"""Search pet names, species, breeds, and owners."""
+		"""Search pet names, species, breeds, and owners in alphabetical order."""
 		search_pattern = f"%{search_term}%"
 		cursor = self.connection.cursor()
 		cursor.execute(
@@ -85,7 +85,7 @@ class PetManager:
 			   OR species LIKE ?
 			   OR breed LIKE ?
 			   OR owner LIKE ?
-			ORDER BY name
+			ORDER BY name COLLATE NOCASE ASC
 			""",
 			(search_pattern, search_pattern, search_pattern, search_pattern)
 		)

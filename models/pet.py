@@ -20,7 +20,7 @@ class Pet:
         self.breed = breed
         self.age = age
         self.owner = owner
-        self.created_at = created_at or datetime.now().isoformat(timespec="seconds")
+        self.created_at = created_at or self._default_created_at()
 
     @property
     def id(self):
@@ -83,7 +83,52 @@ class Pet:
 
     @created_at.setter
     def created_at(self, value):
-        self._created_at = self._require_text(value, "Created at")
+        self._created_at = self._normalize_created_at(value)
+
+    @classmethod
+    def _default_created_at(cls):
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    @classmethod
+    def _normalize_created_at(cls, value):
+        if value is None:
+            return cls._default_created_at()
+
+        if isinstance(value, datetime):
+            dt = value
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("Created at cannot be empty")
+
+            parsed = None
+            for candidate in (value, value.replace("Z", "+00:00")):
+                try:
+                    parsed = datetime.fromisoformat(candidate)
+                    break
+                except ValueError:
+                    continue
+
+            if parsed is None:
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+                    try:
+                        parsed = datetime.strptime(value, fmt)
+                        break
+                    except ValueError:
+                        continue
+
+            if parsed is None:
+                raise ValueError("Created at has an invalid date format")
+
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone()
+            return parsed.strftime("%Y-%m-%d %H:%M:%S")
+
+        raise ValueError("Created at must be a datetime or text value")
 
     @staticmethod
     def _require_text(value, field_name):

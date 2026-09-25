@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from datetime import datetime
 from tkinter import messagebox
 
 from managers.pet_manager import PetManager
@@ -65,7 +66,7 @@ class PetManagement(ctk.CTkFrame):
         )
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
-        sidebar.grid_rowconfigure(5, weight=1)
+        sidebar.grid_rowconfigure(5, weight=0)
 
         brand_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
         brand_frame.grid(row=0, column=0, padx=24, pady=(28, 40), sticky="w")
@@ -83,30 +84,12 @@ class PetManagement(ctk.CTkFrame):
             text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
         ).grid(row=1, column=1, sticky="nw")
 
-        ctk.CTkLabel(
-            sidebar, text="WORKSPACE", text_color="#6E9A87",
-            font=self.font(10, "bold")
-        ).grid(row=1, column=0, padx=24, pady=(0, 12), sticky="w")
-        self.create_nav_button(sidebar, "Dashboard", False, 2)
-        self.create_nav_button(sidebar, "Pet records", True, 3)
-        self.create_nav_button(sidebar, "Owners", False, 4)
-
-        ctk.CTkLabel(
-            sidebar, text="OPERATIONS", text_color="#6E9A87",
-            font=self.font(10, "bold")
-        ).grid(row=6, column=0, padx=24, pady=(24, 12), sticky="w")
-        self.create_nav_button(sidebar, "Grooming records", False, 7)
-        self.create_nav_button(sidebar, "Reports & history", False, 8)
-
-        footer = ctk.CTkFrame(sidebar, fg_color="transparent")
-        footer.grid(row=9, column=0, padx=24, pady=24, sticky="sw")
-        ctk.CTkFrame(
-            footer, width=8, height=8, corner_radius=4, fg_color="#74C69D"
-        ).grid(row=0, column=0, padx=(0, 8))
-        ctk.CTkLabel(
-            footer, text="Local database connected",
-            text_color=self.COLORS["sidebar_muted"], font=self.font(10)
-        ).grid(row=0, column=1)
+        self.create_nav_button(sidebar, "Dashboard", False, 1)
+        self.create_nav_button(sidebar, "Pet Record", True, 2)
+        self.create_nav_button(sidebar, "Owners", False, 3)
+        self.create_nav_button(sidebar, "Grooming Records", False, 4)
+        self.create_nav_button(sidebar, "Reports & History", False, 5)
+        sidebar.grid_rowconfigure(6, weight=1)
 
     def create_nav_button(self, parent, text, active, row):
         button = ctk.CTkButton(
@@ -117,7 +100,7 @@ class PetManagement(ctk.CTkFrame):
             font=self.font(12, "bold" if active else "normal"),
             state="normal" if active else "disabled"
         )
-        button.grid(row=row, column=0, padx=14, pady=3, sticky="ew")
+        button.grid(row=row, column=0, padx=14, pady=2, sticky="ew")
 
     def create_content(self):
         content = ctk.CTkScrollableFrame(
@@ -314,7 +297,7 @@ class PetManagement(ctk.CTkFrame):
                 border_width=1,
                 border_color=self.COLORS["line"],
                 font=self.font(9, "bold"),
-                anchor="center" if heading == "Age" else "w",
+                anchor="center",
                 height=48,
                 corner_radius=0
             ).grid(
@@ -371,6 +354,7 @@ class PetManagement(ctk.CTkFrame):
         )
         row_widgets = []
         for column, value in enumerate(values):
+            is_centered = column in (3, 4, 5)
             value_label = ctk.CTkLabel(
                 self.results_scroll,
                 text=str(value),
@@ -379,7 +363,7 @@ class PetManagement(ctk.CTkFrame):
                 border_width=1,
                 border_color=self.COLORS["line"],
                 font=self.font(11),
-                anchor="center" if column == 3 else "w",
+                anchor="center" if is_centered else "center",
                 height=self.TABLE_ROW_HEIGHT,
                 corner_radius=0
             )
@@ -542,6 +526,28 @@ class PetManagement(ctk.CTkFrame):
         except Exception as error:
             messagebox.showerror("Search failed", str(error))
 
+    @staticmethod
+    def format_ph_time(value):
+        if value is None or value == "":
+            return "Not available"
+
+        try:
+            if isinstance(value, datetime):
+                dt = value
+            else:
+                normalized = str(value).strip()
+                dt = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
+            return dt.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                dt = datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return str(value)
+
     def open_details_modal(self, pet_id):
         """Open complete details for the pet identified by its database ID."""
         try:
@@ -611,7 +617,7 @@ class PetManagement(ctk.CTkFrame):
                 ("Breed", pet.breed or "Not specified"),
                 ("Age", f"{pet.age} year{'s' if pet.age != 1 else ''}"),
                 ("Owner", pet.owner),
-                ("Created at", pet.created_at)
+                ("Created at", self.format_ph_time(pet.created_at))
             ]
             for row_number, (label, value) in enumerate(detail_values):
                 detail_row = ctk.CTkFrame(
@@ -620,21 +626,28 @@ class PetManagement(ctk.CTkFrame):
                     corner_radius=8
                 )
                 detail_row.grid(row=row_number, column=0, pady=(0, 7), sticky="ew")
-                detail_row.grid_columnconfigure(1, weight=1)
+                detail_row.grid_columnconfigure(0, weight=1)
+                detail_row.grid_columnconfigure(1, weight=2)
+
                 ctk.CTkLabel(
                     detail_row,
                     text=label.upper(),
                     text_color=self.COLORS["muted"],
                     font=self.font(9, "bold"),
-                    anchor="w"
-                ).grid(row=0, column=0, padx=12, pady=11, sticky="w")
-                ctk.CTkLabel(
+                    anchor="center",
+                    justify="center"
+                ).grid(row=0, column=0, padx=12, pady=11, sticky="ew")
+
+                value_label = ctk.CTkLabel(
                     detail_row,
                     text=str(value),
                     text_color=self.COLORS["ink"],
                     font=self.font(11, "bold"),
-                    anchor="e"
-                ).grid(row=0, column=1, padx=12, pady=11, sticky="e")
+                    anchor="center",
+                    justify="center",
+                    width=210
+                )
+                value_label.grid(row=0, column=1, padx=12, pady=11, sticky="ew")
 
             actions = ctk.CTkFrame(modal_card, fg_color="transparent")
             actions.grid(row=3, column=0, padx=24, pady=(8, 24), sticky="ew")
