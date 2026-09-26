@@ -5,12 +5,61 @@ from pathlib import Path
 class DatabaseManager:
     """Creates and manages the FurLog SQLite database."""
 
-    def __init__(self, database_name="furlog.db"):
+    def __init__(self, database_name="furlog.db", read_only=False):
         project_folder = Path(__file__).resolve().parent.parent
         self.database_path = project_folder / database_name
-        self.connection = sqlite3.connect(self.database_path)
+        if read_only:
+            database_uri = f"{self.database_path.as_uri()}?mode=ro"
+            self.connection = sqlite3.connect(database_uri, uri=True)
+        else:
+            self.connection = sqlite3.connect(self.database_path)
         self.connection.execute("PRAGMA foreign_keys = ON")
-        self.create_tables()
+        if not read_only:
+            self.create_tables()
+
+    def get_dashboard_summary(self):
+        """Return read-only pet, grooming, food, vitamin, and species counts."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT
+                (SELECT COUNT(*) FROM pets),
+                (SELECT COUNT(*) FROM grooming_records),
+                (SELECT COUNT(*) FROM pets
+                 WHERE foods IS NOT NULL AND TRIM(foods) <> ''),
+                (SELECT COUNT(*) FROM pets
+                 WHERE vitamins IS NOT NULL AND TRIM(vitamins) <> ''),
+                (SELECT COUNT(*) FROM pets
+                 WHERE LOWER(TRIM(COALESCE(species, ''))) IN ('dog', 'dogs')),
+                (SELECT COUNT(*) FROM pets
+                 WHERE LOWER(TRIM(COALESCE(species, ''))) IN ('cat', 'cats')),
+                (SELECT COUNT(*) FROM pets
+                 WHERE LOWER(TRIM(COALESCE(species, '')))
+                       NOT IN ('dog', 'dogs', 'cat', 'cats'))
+        """)
+        row = cursor.fetchone()
+        return {
+            "total_pets": row[0],
+            "grooming_records": row[1],
+            "foods": row[2],
+            "vitamins": row[3],
+            "dogs": row[4],
+            "cats": row[5],
+            "other": row[6]
+        }
+
+    def get_recent_grooming_activities(self, limit=5):
+        """Return the latest grooming dates, pet names, and activity names."""
+        cursor = self.connection.cursor()
+        cursor.execute("""
+            SELECT gr.grooming_date,
+                   COALESCE(NULLIF(TRIM(p.name), ''), 'Unknown pet'),
+                   gr.activity
+            FROM grooming_records AS gr
+            LEFT JOIN pets AS p ON p.id = gr.pet_id
+            ORDER BY gr.grooming_date DESC, gr.id DESC
+            LIMIT ?
+        """, (limit,))
+        return cursor.fetchall()
 
     def create_tables(self):
         """Create the required tables if they do not already exist."""

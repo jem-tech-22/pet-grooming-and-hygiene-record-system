@@ -39,10 +39,21 @@ class PetManagement(ctk.CTkFrame):
         ("Action", 15)
     )
     TABLE_ROW_HEIGHT = 52
+    NAVIGATION_ITEMS = (
+        "Dashboard",
+        "Pet Management",
+        "Grooming Records",
+        "Grooming History",
+        "Reports",
+        "User Management",
+        "Logout"
+    )
+    ROUTABLE_NAVIGATION_ITEMS = ("Dashboard", "Pet Management")
 
-    def __init__(self, master, pet_manager=None):
+    def __init__(self, master, pet_manager=None, on_navigate=None):
         super().__init__(master, fg_color=self.COLORS["canvas"])
         self.pet_manager = pet_manager or PetManager()
+        self.on_navigate = on_navigate
         self.selected_pet_id = None
         self.entries = {}
         self.metric_labels = {}
@@ -70,7 +81,8 @@ class PetManagement(ctk.CTkFrame):
         )
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
-        sidebar.grid_rowconfigure(5, weight=0)
+        sidebar.grid_columnconfigure(0, weight=1)
+        sidebar.grid_rowconfigure(8, weight=1)
 
         brand_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
         brand_frame.grid(row=0, column=0, padx=24, pady=(28, 40), sticky="w")
@@ -88,21 +100,23 @@ class PetManagement(ctk.CTkFrame):
             text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
         ).grid(row=1, column=1, sticky="nw")
 
-        self.create_nav_button(sidebar, "Dashboard", False, 1)
-        self.create_nav_button(sidebar, "Pet Record", True, 2)
-        self.create_nav_button(sidebar, "Owners", False, 3)
-        self.create_nav_button(sidebar, "Grooming Records", False, 4)
-        self.create_nav_button(sidebar, "Reports & History", False, 5)
-        sidebar.grid_rowconfigure(6, weight=1)
+        for row, label in enumerate(self.NAVIGATION_ITEMS, start=1):
+            command = None
+            if self.on_navigate and label in self.ROUTABLE_NAVIGATION_ITEMS:
+                command = lambda target=label: self.on_navigate(target)
+            self.create_nav_button(
+                sidebar, label, label == "Pet Management", row, command
+            )
 
-    def create_nav_button(self, parent, text, active, row):
+    def create_nav_button(self, parent, text, active, row, command=None):
         button = ctk.CTkButton(
             parent, text=f"   {text}", anchor="w", height=40, corner_radius=9,
             fg_color=self.COLORS["sidebar_active"] if active else "transparent",
             hover_color="#255A45",
             text_color="#FFFFFF" if active else self.COLORS["sidebar_muted"],
             font=self.font(12, "bold" if active else "normal"),
-            state="normal" if active else "disabled"
+            command=command,
+            state="normal" if command else "disabled"
         )
         button.grid(row=row, column=0, padx=14, pady=2, sticky="ew")
 
@@ -189,7 +203,7 @@ class PetManagement(ctk.CTkFrame):
         form_card.grid_columnconfigure(1, weight=1)
         form_card.grid_columnconfigure(3, weight=1)
         ctk.CTkLabel(
-            form_card, text="Pet information", text_color=self.COLORS["ink"],
+            form_card, text="Pet information & Needs", text_color=self.COLORS["ink"],
             font=self.font(15, "bold")
         ).grid(row=0, column=0, columnspan=4, padx=18, pady=(16, 3), sticky="w")
         ctk.CTkLabel(
@@ -604,7 +618,7 @@ class PetManagement(ctk.CTkFrame):
             heading.grid(row=1, column=0, padx=24, sticky="ew")
             ctk.CTkLabel(
                 heading,
-                text="PET PROFILE",
+                text="PET INFO",
                 text_color=self.COLORS["primary"],
                 font=self.font(10, "bold")
             ).grid(row=0, column=0, sticky="w")
