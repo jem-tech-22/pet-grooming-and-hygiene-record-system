@@ -50,7 +50,7 @@ class PetManagement(ctk.CTkFrame):
     )
     ROUTABLE_NAVIGATION_ITEMS = (
         "Dashboard", "Pet Management", "Grooming Records", "Grooming History",
-        "Reports"
+        "Reports", "User Management"
     )
 
     def __init__(self, master, pet_manager=None, on_navigate=None):
@@ -103,13 +103,30 @@ class PetManagement(ctk.CTkFrame):
             text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
         ).grid(row=1, column=1, sticky="nw")
 
-        for row, label in enumerate(self.NAVIGATION_ITEMS, start=1):
-            command = None
-            if self.on_navigate and label in self.ROUTABLE_NAVIGATION_ITEMS:
-                command = lambda target=label: self.on_navigate(target)
+        for row, label in enumerate(self.get_navigation_items(), start=1):
+            command = self.get_navigation_command(label)
             self.create_nav_button(
                 sidebar, label, label == "Pet Management", row, command
             )
+
+    def get_navigation_items(self):
+        current_user = getattr(self.winfo_toplevel(), "current_user", None)
+        if current_user is not None and current_user.role == "Administrator":
+            return self.NAVIGATION_ITEMS
+        return tuple(label for label in self.NAVIGATION_ITEMS if label != "User Management")
+
+    def get_navigation_command(self, label):
+        if not self.on_navigate:
+            return None
+        if label == "Logout":
+            return lambda: self.on_navigate("Logout")
+        if label == "User Management":
+            current_user = getattr(self.winfo_toplevel(), "current_user", None)
+            if current_user is None or current_user.role != "Administrator":
+                return None
+        if label in self.ROUTABLE_NAVIGATION_ITEMS:
+            return lambda target=label: self.on_navigate(target)
+        return None
 
     def create_nav_button(self, parent, text, active, row, command=None):
         button = ctk.CTkButton(

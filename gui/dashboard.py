@@ -12,8 +12,11 @@ class Dashboard(ctk.CTkFrame):
 	COLORS = PetManagement.COLORS
 	FONT_FAMILY = PetManagement.FONT_FAMILY
 	NAVIGATION_ITEMS = PetManagement.NAVIGATION_ITEMS
+	ROUTABLE_NAVIGATION_ITEMS = PetManagement.ROUTABLE_NAVIGATION_ITEMS
 	font = PetManagement.font
 	create_nav_button = PetManagement.create_nav_button
+	get_navigation_items = PetManagement.get_navigation_items
+	get_navigation_command = PetManagement.get_navigation_command
 
 	def __init__(self, master, on_navigate=None):
 		super().__init__(master, fg_color=self.COLORS["canvas"])
@@ -55,13 +58,8 @@ class Dashboard(ctk.CTkFrame):
 			text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
 		).grid(row=1, column=1, sticky="nw")
 
-		for row, label in enumerate(self.NAVIGATION_ITEMS, start=1):
-			command = None
-			if self.on_navigate and label in (
-				"Dashboard", "Pet Management", "Grooming Records", "Grooming History",
-				"Reports"
-			):
-				command = lambda target=label: self.on_navigate(target)
+		for row, label in enumerate(self.get_navigation_items(), start=1):
+			command = self.get_navigation_command(label)
 			self.create_nav_button(sidebar, label, label == "Dashboard", row, command)
 
 	def create_content(self):

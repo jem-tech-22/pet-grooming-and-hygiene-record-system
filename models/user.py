@@ -1,10 +1,9 @@
 class User:
-    """Represents a FurLog application user."""
+    """Represents a FurLog account or authenticated session without credentials."""
 
-    def __init__(self, id=None, username="", password="", full_name="", role=""):
+    def __init__(self, id=None, username="", full_name="", role=""):
         self.id = id
         self.username = username
-        self.password = password
         self.full_name = full_name
         self.role = role
 
@@ -23,14 +22,6 @@ class User:
     @username.setter
     def username(self, value):
         self._username = self._require_text(value, "Username")
-
-    @property
-    def password(self):
-        return self._password
-
-    @password.setter
-    def password(self, value):
-        self._password = self._require_text(value, "Password")
 
     @property
     def full_name(self):
