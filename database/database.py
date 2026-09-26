@@ -34,9 +34,19 @@ class DatabaseManager:
                 breed TEXT,
                 age INTEGER,
                 owner TEXT NOT NULL,
+                vitamins TEXT,
+                foods TEXT,
+                needs TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        pet_columns = {
+            row[1] for row in cursor.execute("PRAGMA table_info(pets)").fetchall()
+        }
+        for column_name in ("vitamins", "foods", "needs"):
+            if column_name not in pet_columns:
+                cursor.execute(f"ALTER TABLE pets ADD COLUMN {column_name} TEXT")
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS grooming_records (

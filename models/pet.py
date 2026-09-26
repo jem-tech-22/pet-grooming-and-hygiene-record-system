@@ -12,7 +12,10 @@ class Pet:
         breed="",
         age=None,
         owner="",
-        created_at=None
+        created_at=None,
+        vitamins="",
+        foods="",
+        needs=""
     ):
         self.id = id
         self.name = name
@@ -21,6 +24,9 @@ class Pet:
         self.age = age
         self.owner = owner
         self.created_at = created_at or self._default_created_at()
+        self.vitamins = vitamins
+        self.foods = foods
+        self.needs = needs
 
     @property
     def id(self):
@@ -76,6 +82,30 @@ class Pet:
     @owner.setter
     def owner(self, value):
         self._owner = self._require_text(value, "Owner")
+
+    @property
+    def vitamins(self):
+        return self._vitamins
+
+    @vitamins.setter
+    def vitamins(self, value):
+        self._vitamins = self._optional_text(value, "Vitamins")
+
+    @property
+    def foods(self):
+        return self._foods
+
+    @foods.setter
+    def foods(self, value):
+        self._foods = self._optional_text(value, "Foods")
+
+    @property
+    def needs(self):
+        return self._needs
+
+    @needs.setter
+    def needs(self, value):
+        self._needs = self._optional_text(value, "Needs")
 
     @property
     def created_at(self):
@@ -134,4 +164,12 @@ class Pet:
     def _require_text(value, field_name):
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field_name} cannot be empty")
+        return value.strip()
+
+    @staticmethod
+    def _optional_text(value, field_name):
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} must be text")
         return value.strip()

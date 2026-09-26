@@ -27,12 +27,16 @@ class PetManagement(ctk.CTkFrame):
     }
     FONT_FAMILY = "Quicksand"
     TABLE_COLUMNS = (
-        ("Pet name", 17),
-        ("Species", 13),
-        ("Breed", 20),
-        ("Age", 10),
-        ("Owner", 20),
-        ("Action", 20)
+        ("No.", 5),
+        ("Pet name", 15),
+        ("Species", 10),
+        ("Breed", 13),
+        ("Age", 6),
+        ("Owner", 12),
+        ("Vitamins", 13),
+        ("Foods", 13),
+        ("Needs", 13),
+        ("Action", 15)
     )
     TABLE_ROW_HEIGHT = 52
 
@@ -196,7 +200,10 @@ class PetManagement(ctk.CTkFrame):
         fields = [
             ("Name", 2, 0, "Pet name"), ("Species", 2, 2, "e.g. Dog"),
             ("Breed", 3, 0, "Breed or mix"), ("Age", 3, 2, "Years"),
-            ("Owner", 4, 0, "Owner name")
+            ("Owner", 4, 0, "Owner name"),
+            ("Vitamins", 4, 2, "Vitamins or supplements"),
+            ("Foods", 5, 0, "Food information"),
+            ("Needs", 5, 2, "Special care needs")
         ]
         for field_name, row, column, placeholder in fields:
             ctk.CTkLabel(
@@ -213,7 +220,7 @@ class PetManagement(ctk.CTkFrame):
             self.entries[field_name.lower()] = entry
 
         actions = ctk.CTkFrame(form_card, fg_color="transparent")
-        actions.grid(row=5, column=0, columnspan=4, padx=18, pady=(12, 17), sticky="w")
+        actions.grid(row=6, column=0, columnspan=4, padx=18, pady=(12, 17), sticky="w")
         self.create_action_button(actions, "Add pet", self.add_pet, 0, True)
         self.create_action_button(actions, "Update", self.update_pet, 1)
         self.create_action_button(actions, "Clear", self.clear_fields, 2)
@@ -334,7 +341,7 @@ class PetManagement(ctk.CTkFrame):
             self.empty_state_label.grid_remove()
         else:
             self.empty_state_label.grid(
-                row=1, column=0, columnspan=6, padx=20, pady=38
+                row=1, column=0, columnspan=len(self.TABLE_COLUMNS), padx=20, pady=38
             )
         self.update_metrics(pets)
         result_text = (
@@ -346,11 +353,15 @@ class PetManagement(ctk.CTkFrame):
     def create_pet_row(self, row_number, pet):
         row_color = self.COLORS["surface"] if row_number % 2 == 0 else "#FAFCFA"
         values = (
+            row_number + 1,
             self.truncate_text(pet.name, 18),
             self.truncate_text(pet.species, 14),
             self.truncate_text(pet.breed or "-", 20),
             pet.age,
-            self.truncate_text(pet.owner, 20)
+            self.truncate_text(pet.owner, 20),
+            self.truncate_text(pet.vitamins or "-", 18),
+            self.truncate_text(pet.foods or "-", 18),
+            self.truncate_text(pet.needs or "-", 18)
         )
         row_widgets = []
         for column, value in enumerate(values):
@@ -402,7 +413,7 @@ class PetManagement(ctk.CTkFrame):
         )
         action_button.grid(
             row=row_number + 1,
-            column=5,
+            column=len(self.TABLE_COLUMNS) - 1,
             padx=(0, 1),
             pady=(0, 5),
             sticky="nsew"
@@ -440,6 +451,9 @@ class PetManagement(ctk.CTkFrame):
         breed = self.entries["breed"].get().strip()
         age_text = self.entries["age"].get().strip()
         owner = self.entries["owner"].get().strip()
+        vitamins = self.entries["vitamins"].get().strip()
+        foods = self.entries["foods"].get().strip()
+        needs = self.entries["needs"].get().strip()
         if not name or not species or not owner:
             messagebox.showwarning(
                 "Missing information", "Name, Species, and Owner are required."
@@ -457,7 +471,7 @@ class PetManagement(ctk.CTkFrame):
                 "Invalid age", "Age must be a non-negative whole number."
             )
             return None
-        return name, species, breed, age, owner
+        return name, species, breed, age, owner, vitamins, foods, needs
 
     def add_pet(self):
         values = self.get_form_values()
@@ -466,7 +480,8 @@ class PetManagement(ctk.CTkFrame):
         try:
             pet = Pet(
                 name=values[0], species=values[1], breed=values[2],
-                age=values[3], owner=values[4]
+                age=values[3], owner=values[4], vitamins=values[5],
+                foods=values[6], needs=values[7]
             )
             self.pet_manager.create_pet(pet)
             self.load_pets()
@@ -485,7 +500,8 @@ class PetManagement(ctk.CTkFrame):
         try:
             pet = Pet(
                 id=self.selected_pet_id, name=values[0], species=values[1],
-                breed=values[2], age=values[3], owner=values[4]
+                breed=values[2], age=values[3], owner=values[4],
+                vitamins=values[5], foods=values[6], needs=values[7]
             )
             if self.pet_manager.update_pet(pet):
                 self.load_pets()
@@ -617,6 +633,9 @@ class PetManagement(ctk.CTkFrame):
                 ("Breed", pet.breed or "Not specified"),
                 ("Age", f"{pet.age} year{'s' if pet.age != 1 else ''}"),
                 ("Owner", pet.owner),
+                ("Vitamins", pet.vitamins or "Not specified"),
+                ("Foods", pet.foods or "Not specified"),
+                ("Needs", pet.needs or "Not specified"),
                 ("Created at", self.format_ph_time(pet.created_at))
             ]
             for row_number, (label, value) in enumerate(detail_values):
@@ -726,6 +745,9 @@ class PetManagement(ctk.CTkFrame):
             self.set_entry_value("breed", pet.breed)
             self.set_entry_value("age", pet.age)
             self.set_entry_value("owner", pet.owner)
+            self.set_entry_value("vitamins", pet.vitamins)
+            self.set_entry_value("foods", pet.foods)
+            self.set_entry_value("needs", pet.needs)
             for row_widgets in self.pet_rows.values():
                 self.set_row_border(row_widgets, self.COLORS["line"])
             self.set_row_border(self.pet_rows[pet.id], self.COLORS["primary"])

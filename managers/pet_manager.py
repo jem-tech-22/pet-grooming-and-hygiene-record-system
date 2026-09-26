@@ -14,10 +14,11 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			INSERT INTO pets (name, species, breed, age, owner, created_at)
-			VALUES (?, ?, ?, ?, ?, ?)
+			INSERT INTO pets (name, species, breed, age, owner, created_at, vitamins, foods, needs)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			""",
-			(pet.name, pet.species, pet.breed, pet.age, pet.owner, pet.created_at)
+			(pet.name, pet.species, pet.breed, pet.age, pet.owner, pet.created_at,
+			 pet.vitamins, pet.foods, pet.needs)
 		)
 		self.connection.commit()
 		pet.id = cursor.lastrowid
@@ -28,7 +29,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at
+			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs
 			FROM pets
 			ORDER BY name COLLATE NOCASE ASC
 			"""
@@ -40,7 +41,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at
+			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs
 			FROM pets
 			WHERE id = ?
 			""",
@@ -58,10 +59,12 @@ class PetManager:
 		cursor.execute(
 			"""
 			UPDATE pets
-			SET name = ?, species = ?, breed = ?, age = ?, owner = ?
+			SET name = ?, species = ?, breed = ?, age = ?, owner = ?,
+			    vitamins = ?, foods = ?, needs = ?
 			WHERE id = ?
 			""",
-			(pet.name, pet.species, pet.breed, pet.age, pet.owner, pet.id)
+			(pet.name, pet.species, pet.breed, pet.age, pet.owner,
+			 pet.vitamins, pet.foods, pet.needs, pet.id)
 		)
 		self.connection.commit()
 		return cursor.rowcount > 0
@@ -79,7 +82,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at
+			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs
 			FROM pets
 			WHERE name LIKE ?
 			   OR species LIKE ?
@@ -100,5 +103,8 @@ class PetManager:
 			breed=row[3],
 			age=row[4],
 			owner=row[5],
-			created_at=row[6]
+			created_at=row[6],
+			vitamins=row[7],
+			foods=row[8],
+			needs=row[9]
 		)
