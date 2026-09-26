@@ -48,7 +48,9 @@ class PetManagement(ctk.CTkFrame):
         "User Management",
         "Logout"
     )
-    ROUTABLE_NAVIGATION_ITEMS = ("Dashboard", "Pet Management")
+    ROUTABLE_NAVIGATION_ITEMS = (
+        "Dashboard", "Pet Management", "Grooming Records"
+    )
 
     def __init__(self, master, pet_manager=None, on_navigate=None):
         super().__init__(master, fg_color=self.COLORS["canvas"])
@@ -213,7 +215,7 @@ class PetManagement(ctk.CTkFrame):
 
         fields = [
             ("Name", 2, 0, "Pet name"), ("Species", 2, 2, "e.g. Dog"),
-            ("Breed", 3, 0, "Breed or mix"), ("Age", 3, 2, "Years"),
+            ("Breed", 3, 0, "Breed or mix"), ("Age", 3, 2, "Whole number"),
             ("Owner", 4, 0, "Owner name"),
             ("Vitamins", 4, 2, "Vitamins or supplements"),
             ("Foods", 5, 0, "Food information"),
@@ -224,6 +226,33 @@ class PetManagement(ctk.CTkFrame):
                 form_card, text=field_name, text_color=self.COLORS["ink"],
                 font=self.font(11, "bold")
             ).grid(row=row, column=column, padx=(18, 8), pady=6, sticky="e")
+
+            if field_name == "Age":
+                age_input = ctk.CTkFrame(form_card, fg_color="transparent")
+                age_input.grid(
+                    row=row, column=column + 1, padx=(0, 18), pady=6, sticky="ew"
+                )
+                age_input.grid_columnconfigure(0, weight=1)
+                entry = ctk.CTkEntry(
+                    age_input, height=36, corner_radius=8, border_width=1,
+                    border_color=self.COLORS["line"], fg_color="#FBFCFB",
+                    text_color=self.COLORS["ink"], placeholder_text=placeholder,
+                    placeholder_text_color="#A1ADA6", font=self.font(11)
+                )
+                entry.grid(row=0, column=0, sticky="ew")
+                self.age_unit_menu = ctk.CTkOptionMenu(
+                    age_input, values=["years", "months"], width=92, height=36,
+                    corner_radius=8, fg_color=self.COLORS["soft_gray"],
+                    button_color=self.COLORS["primary"],
+                    button_hover_color=self.COLORS["primary_hover"],
+                    text_color=self.COLORS["ink"], font=self.font(10, "bold"),
+                    dropdown_font=self.font(10)
+                )
+                self.age_unit_menu.grid(row=0, column=1, padx=(6, 0))
+                self.age_unit_menu.set("years")
+                self.entries[field_name.lower()] = entry
+                continue
+
             entry = ctk.CTkEntry(
                 form_card, height=36, corner_radius=8, border_width=1,
                 border_color=self.COLORS["line"], fg_color="#FBFCFB",
@@ -371,7 +400,7 @@ class PetManagement(ctk.CTkFrame):
             self.truncate_text(pet.name, 18),
             self.truncate_text(pet.species, 14),
             self.truncate_text(pet.breed or "-", 20),
-            pet.age,
+            self.format_age(pet),
             self.truncate_text(pet.owner, 20),
             self.truncate_text(pet.vitamins or "-", 18),
             self.truncate_text(pet.foods or "-", 18),
@@ -442,6 +471,11 @@ class PetManagement(ctk.CTkFrame):
             return value
         return f"{value[:max_length - 3]}..."
 
+    @staticmethod
+    def format_age(pet):
+        unit = pet.age_unit[:-1] if pet.age == 1 else pet.age_unit
+        return f"{pet.age} {unit}"
+
     def set_row_hover(self, row_widgets, is_hovered):
         for widget in row_widgets:
             if widget.winfo_exists() and isinstance(widget, ctk.CTkLabel):
@@ -464,6 +498,7 @@ class PetManagement(ctk.CTkFrame):
         species = self.entries["species"].get().strip()
         breed = self.entries["breed"].get().strip()
         age_text = self.entries["age"].get().strip()
+        age_unit = self.age_unit_menu.get()
         owner = self.entries["owner"].get().strip()
         vitamins = self.entries["vitamins"].get().strip()
         foods = self.entries["foods"].get().strip()
@@ -485,7 +520,7 @@ class PetManagement(ctk.CTkFrame):
                 "Invalid age", "Age must be a non-negative whole number."
             )
             return None
-        return name, species, breed, age, owner, vitamins, foods, needs
+        return name, species, breed, age, owner, vitamins, foods, needs, age_unit
 
     def add_pet(self):
         values = self.get_form_values()
@@ -495,7 +530,7 @@ class PetManagement(ctk.CTkFrame):
             pet = Pet(
                 name=values[0], species=values[1], breed=values[2],
                 age=values[3], owner=values[4], vitamins=values[5],
-                foods=values[6], needs=values[7]
+                foods=values[6], needs=values[7], age_unit=values[8]
             )
             self.pet_manager.create_pet(pet)
             self.load_pets()
@@ -515,7 +550,8 @@ class PetManagement(ctk.CTkFrame):
             pet = Pet(
                 id=self.selected_pet_id, name=values[0], species=values[1],
                 breed=values[2], age=values[3], owner=values[4],
-                vitamins=values[5], foods=values[6], needs=values[7]
+                vitamins=values[5], foods=values[6], needs=values[7],
+                age_unit=values[8]
             )
             if self.pet_manager.update_pet(pet):
                 self.load_pets()
@@ -645,7 +681,7 @@ class PetManagement(ctk.CTkFrame):
             detail_values = [
                 ("Species", pet.species),
                 ("Breed", pet.breed or "Not specified"),
-                ("Age", f"{pet.age} year{'s' if pet.age != 1 else ''}"),
+                ("Age", self.format_age(pet)),
                 ("Owner", pet.owner),
                 ("Vitamins", pet.vitamins or "Not specified"),
                 ("Foods", pet.foods or "Not specified"),
@@ -758,6 +794,7 @@ class PetManagement(ctk.CTkFrame):
             self.set_entry_value("species", pet.species)
             self.set_entry_value("breed", pet.breed)
             self.set_entry_value("age", pet.age)
+            self.age_unit_menu.set(pet.age_unit)
             self.set_entry_value("owner", pet.owner)
             self.set_entry_value("vitamins", pet.vitamins)
             self.set_entry_value("foods", pet.foods)
@@ -788,6 +825,7 @@ class PetManagement(ctk.CTkFrame):
         self.selected_pet_id = None
         for entry in self.entries.values():
             entry.delete(0, "end")
+        self.age_unit_menu.set("years")
         for row_widgets in self.pet_rows.values():
             self.set_row_border(row_widgets, self.COLORS["line"])
 

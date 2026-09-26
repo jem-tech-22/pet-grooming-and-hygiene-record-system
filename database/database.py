@@ -82,6 +82,7 @@ class DatabaseManager:
                 species TEXT NOT NULL,
                 breed TEXT,
                 age INTEGER,
+                age_unit TEXT NOT NULL DEFAULT 'years',
                 owner TEXT NOT NULL,
                 vitamins TEXT,
                 foods TEXT,
@@ -93,6 +94,10 @@ class DatabaseManager:
         pet_columns = {
             row[1] for row in cursor.execute("PRAGMA table_info(pets)").fetchall()
         }
+        if "age_unit" not in pet_columns:
+            cursor.execute(
+                "ALTER TABLE pets ADD COLUMN age_unit TEXT NOT NULL DEFAULT 'years'"
+            )
         for column_name in ("vitamins", "foods", "needs"):
             if column_name not in pet_columns:
                 cursor.execute(f"ALTER TABLE pets ADD COLUMN {column_name} TEXT")

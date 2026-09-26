@@ -15,13 +15,15 @@ class Pet:
         created_at=None,
         vitamins="",
         foods="",
-        needs=""
+        needs="",
+        age_unit="years"
     ):
         self.id = id
         self.name = name
         self.species = species
         self.breed = breed
         self.age = age
+        self.age_unit = age_unit
         self.owner = owner
         self.created_at = created_at or self._default_created_at()
         self.vitamins = vitamins
@@ -74,6 +76,16 @@ class Pet:
         if value is not None and (not isinstance(value, int) or value < 0):
             raise ValueError("Age must be a non-negative whole number")
         self._age = value
+
+    @property
+    def age_unit(self):
+        return self._age_unit
+
+    @age_unit.setter
+    def age_unit(self, value):
+        if not isinstance(value, str) or value.strip().lower() not in ("years", "months"):
+            raise ValueError("Age unit must be years or months")
+        self._age_unit = value.strip().lower()
 
     @property
     def owner(self):

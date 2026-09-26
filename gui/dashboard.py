@@ -57,7 +57,9 @@ class Dashboard(ctk.CTkFrame):
 
 		for row, label in enumerate(self.NAVIGATION_ITEMS, start=1):
 			command = None
-			if self.on_navigate and label in ("Dashboard", "Pet Management"):
+			if self.on_navigate and label in (
+				"Dashboard", "Pet Management", "Grooming Records"
+			):
 				command = lambda target=label: self.on_navigate(target)
 			self.create_nav_button(sidebar, label, label == "Dashboard", row, command)
 
