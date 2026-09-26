@@ -19,16 +19,49 @@ class GroomingManager:
 		""")
 		return cursor.fetchall()
 
-	def get_all_records(self):
-		"""Return grooming rows joined with their pet name and owner."""
+	def get_activity_options(self):
+		"""Return the grooming activities already present in saved records."""
 		cursor = self.connection.cursor()
 		cursor.execute("""
+			SELECT DISTINCT activity
+			FROM grooming_records
+			ORDER BY activity COLLATE NOCASE ASC
+		""")
+		return [row[0] for row in cursor.fetchall()]
+
+	def get_all_records(
+		self, search_term="", activity=None, start_date=None, end_date=None,
+		pet_id=None
+	):
+		"""Return grooming rows joined with their pet name and owner."""
+		cursor = self.connection.cursor()
+		conditions = []
+		parameters = []
+		if search_term.strip():
+			conditions.append("LOWER(p.name) LIKE LOWER(?)")
+			parameters.append(f"%{search_term.strip()}%")
+		if activity:
+			conditions.append("gr.activity = ?")
+			parameters.append(activity)
+		if start_date:
+			conditions.append("gr.grooming_date >= ?")
+			parameters.append(start_date)
+		if end_date:
+			conditions.append("gr.grooming_date <= ?")
+			parameters.append(end_date)
+		if pet_id is not None:
+			conditions.append("gr.pet_id = ?")
+			parameters.append(pet_id)
+
+		where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+		cursor.execute(f"""
 			SELECT gr.id, gr.pet_id, p.name, p.owner,
 			       gr.grooming_date, gr.activity, COALESCE(gr.notes, '')
 			FROM grooming_records AS gr
 			JOIN pets AS p ON p.id = gr.pet_id
+			{where_clause}
 			ORDER BY gr.grooming_date DESC, gr.id DESC
-		""")
+		""", parameters)
 		return cursor.fetchall()
 
 	def get_record_by_id(self, record_id):

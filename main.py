@@ -2,6 +2,7 @@ import customtkinter as ctk
 
 from gui.dashboard import Dashboard
 from gui.grooming_records import GroomingRecords
+from gui.grooming_history import GroomingHistory
 from gui.pet_management import PetManagement
 
 
@@ -21,7 +22,8 @@ class FurLogApp(ctk.CTk):
 		self.pages = {
 			"Dashboard": Dashboard(self, on_navigate=self.show_page),
 			"Pet Management": PetManagement(self, on_navigate=self.show_page),
-			"Grooming Records": GroomingRecords(self, on_navigate=self.show_page)
+			"Grooming Records": GroomingRecords(self, on_navigate=self.show_page),
+			"Grooming History": GroomingHistory(self, on_navigate=self.show_page)
 		}
 		for page in self.pages.values():
 			page.grid(row=0, column=0, sticky="nsew")
@@ -32,7 +34,7 @@ class FurLogApp(ctk.CTk):
 		page = self.pages.get(page_name)
 		if page is None:
 			return
-		if page_name in ("Dashboard", "Grooming Records"):
+		if page_name in ("Dashboard", "Grooming Records", "Grooming History"):
 			page.refresh_data()
 		page.tkraise()
 		self.title(f"FurLog - {page_name}")

@@ -49,7 +49,7 @@ class PetManagement(ctk.CTkFrame):
         "Logout"
     )
     ROUTABLE_NAVIGATION_ITEMS = (
-        "Dashboard", "Pet Management", "Grooming Records"
+        "Dashboard", "Pet Management", "Grooming Records", "Grooming History"
     )
 
     def __init__(self, master, pet_manager=None, on_navigate=None):
