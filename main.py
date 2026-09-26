@@ -4,6 +4,7 @@ from gui.dashboard import Dashboard
 from gui.grooming_records import GroomingRecords
 from gui.grooming_history import GroomingHistory
 from gui.pet_management import PetManagement
+from gui.reports import Reports
 
 
 class FurLogApp(ctk.CTk):
@@ -23,7 +24,8 @@ class FurLogApp(ctk.CTk):
 			"Dashboard": Dashboard(self, on_navigate=self.show_page),
 			"Pet Management": PetManagement(self, on_navigate=self.show_page),
 			"Grooming Records": GroomingRecords(self, on_navigate=self.show_page),
-			"Grooming History": GroomingHistory(self, on_navigate=self.show_page)
+			"Grooming History": GroomingHistory(self, on_navigate=self.show_page),
+			"Reports": Reports(self, on_navigate=self.show_page)
 		}
 		for page in self.pages.values():
 			page.grid(row=0, column=0, sticky="nsew")
@@ -34,7 +36,9 @@ class FurLogApp(ctk.CTk):
 		page = self.pages.get(page_name)
 		if page is None:
 			return
-		if page_name in ("Dashboard", "Grooming Records", "Grooming History"):
+		if page_name in (
+			"Dashboard", "Grooming Records", "Grooming History", "Reports"
+		):
 			page.refresh_data()
 		page.tkraise()
 		self.title(f"FurLog - {page_name}")
