@@ -52,7 +52,6 @@ class PetManagement(ctk.CTkFrame):
         "Dashboard", "Pet Management", "Grooming Records", "Grooming History",
         "Reports", "User Management"
     )
-
     def __init__(self, master, pet_manager=None, on_navigate=None):
         super().__init__(master, fg_color=self.COLORS["canvas"])
         self.pet_manager = pet_manager or PetManager()
@@ -85,7 +84,6 @@ class PetManagement(ctk.CTkFrame):
         sidebar.grid(row=0, column=0, sticky="nsew")
         sidebar.grid_propagate(False)
         sidebar.grid_columnconfigure(0, weight=1)
-        sidebar.grid_rowconfigure(8, weight=1)
 
         brand_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
         brand_frame.grid(row=0, column=0, padx=24, pady=(28, 40), sticky="w")
@@ -103,11 +101,20 @@ class PetManagement(ctk.CTkFrame):
             text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
         ).grid(row=1, column=1, sticky="nw")
 
-        for row, label in enumerate(self.get_navigation_items(), start=1):
+        navigation_items = self.get_navigation_items()
+        logout_row = len(navigation_items) + 1
+        sidebar.grid_rowconfigure(logout_row - 1, weight=1)
+        for row, label in enumerate(
+            (item for item in navigation_items if item != "Logout"), start=1
+        ):
             command = self.get_navigation_command(label)
             self.create_nav_button(
                 sidebar, label, label == "Pet Management", row, command
             )
+        self.create_nav_button(
+            sidebar, "Logout", False, logout_row,
+            self.get_navigation_command("Logout")
+        )
 
     def get_navigation_items(self):
         current_user = getattr(self.winfo_toplevel(), "current_user", None)
@@ -129,16 +136,19 @@ class PetManagement(ctk.CTkFrame):
         return None
 
     def create_nav_button(self, parent, text, active, row, command=None):
+        label = text.strip()
+        text_color = "#FFFFFF" if active else self.COLORS["sidebar_muted"]
+        background_color = self.COLORS["sidebar_active"] if active else "transparent"
         button = ctk.CTkButton(
-            parent, text=f"   {text}", anchor="w", height=40, corner_radius=9,
-            fg_color=self.COLORS["sidebar_active"] if active else "transparent",
-            hover_color="#255A45",
-            text_color="#FFFFFF" if active else self.COLORS["sidebar_muted"],
+            parent, text=f"   {label}", anchor="w", height=40, corner_radius=9,
+            fg_color=background_color, hover_color="#255A45",
+            text_color=text_color,
             font=self.font(12, "bold" if active else "normal"),
             command=command,
             state="normal" if command else "disabled"
         )
-        button.grid(row=row, column=0, padx=14, pady=2, sticky="ew")
+        vertical_padding = (2, 28) if label == "Logout" else 2
+        button.grid(row=row, column=0, padx=14, pady=vertical_padding, sticky="ew")
 
     def create_content(self):
         content = ctk.CTkScrollableFrame(

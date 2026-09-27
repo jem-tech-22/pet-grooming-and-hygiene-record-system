@@ -59,7 +59,6 @@ class GroomingRecords(ctk.CTkFrame):
 		sidebar.grid(row=0, column=0, sticky="nsew")
 		sidebar.grid_propagate(False)
 		sidebar.grid_columnconfigure(0, weight=1)
-		sidebar.grid_rowconfigure(8, weight=1)
 
 		brand_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
 		brand_frame.grid(row=0, column=0, padx=24, pady=(28, 40), sticky="w")
@@ -77,11 +76,20 @@ class GroomingRecords(ctk.CTkFrame):
 			text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
 		).grid(row=1, column=1, sticky="nw")
 
-		for row, label in enumerate(self.get_navigation_items(), start=1):
+		navigation_items = self.get_navigation_items()
+		logout_row = len(navigation_items) + 1
+		sidebar.grid_rowconfigure(logout_row - 1, weight=1)
+		for row, label in enumerate(
+			(item for item in navigation_items if item != "Logout"), start=1
+		):
 			command = self.get_navigation_command(label)
 			self.create_nav_button(
 				sidebar, label, label == "Grooming Records", row, command
 			)
+		self.create_nav_button(
+			sidebar, "Logout", False, logout_row,
+			self.get_navigation_command("Logout")
+		)
 
 	def create_content(self):
 		content = ctk.CTkScrollableFrame(
