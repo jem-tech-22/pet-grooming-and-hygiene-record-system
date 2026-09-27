@@ -25,29 +25,13 @@ class LoginScreen(ctk.CTkFrame):
 		self.grid_columnconfigure(0, weight=1)
 		self.grid_rowconfigure(0, weight=1)
 		card = ctk.CTkFrame(
-			self, width=440, height=560 if self.setup_mode else 440,
+			self, width=440, height=560 if self.setup_mode else 360,
 			fg_color=self.COLORS["surface"], border_width=1,
 			border_color=self.COLORS["line"], corner_radius=12
 		)
 		card.grid(row=0, column=0, padx=24, pady=24)
 		card.grid_propagate(False)
 		card.grid_columnconfigure(0, weight=1)
-
-		brand = ctk.CTkFrame(card, fg_color="transparent")
-		brand.grid(row=0, column=0, padx=30, pady=(30, 20), sticky="w")
-		ctk.CTkLabel(
-			brand, text="F", width=42, height=42, corner_radius=12,
-			fg_color=self.COLORS["primary"], text_color="#FFFFFF",
-			font=self.font(23, "bold")
-		).grid(row=0, column=0, rowspan=2, padx=(0, 12))
-		ctk.CTkLabel(
-			brand, text="FurLog", text_color=self.COLORS["ink"],
-			font=self.font(22, "bold")
-		).grid(row=0, column=1, sticky="sw")
-		ctk.CTkLabel(
-			brand, text="PET CARE RECORDS", text_color=self.COLORS["muted"],
-			font=self.font(9, "bold")
-		).grid(row=1, column=1, sticky="nw")
 
 		title = "Create Administrator" if self.setup_mode else "Welcome back"
 		description = (
@@ -56,14 +40,14 @@ class LoginScreen(ctk.CTkFrame):
 		)
 		ctk.CTkLabel(
 			card, text=title, text_color=self.COLORS["ink"],
-			font=self.font(21, "bold")
-		).grid(row=1, column=0, padx=30, sticky="w")
+			font=self.font(21, "bold"), anchor="center", justify="center"
+		).grid(row=0, column=0, padx=30, pady=(34, 0), sticky="ew")
 		ctk.CTkLabel(
 			card, text=description, text_color=self.COLORS["muted"],
-			font=self.font(11), wraplength=370, justify="left"
-		).grid(row=2, column=0, padx=30, pady=(5, 18), sticky="w")
+			font=self.font(11), wraplength=370, anchor="center", justify="center"
+		).grid(row=1, column=0, padx=30, pady=(5, 18), sticky="ew")
 
-		row = 3
+		row = 2
 		if self.setup_mode:
 			self.full_name_entry = self.create_field(card, "Full Name", row)
 			row += 1

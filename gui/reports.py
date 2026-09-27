@@ -5,6 +5,7 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from database.database import DatabaseManager
+from gui.branding import get_furlog_logo
 from gui.pet_management import PetManagement
 from managers.grooming_manager import GroomingManager
 from managers.pet_manager import PetManager
@@ -59,18 +60,8 @@ class Reports(ctk.CTkFrame):
 		brand_frame = ctk.CTkFrame(sidebar, fg_color="transparent")
 		brand_frame.grid(row=0, column=0, padx=24, pady=(28, 40), sticky="w")
 		ctk.CTkLabel(
-			brand_frame, text="F", width=38, height=38, corner_radius=12,
-			fg_color=self.COLORS["primary"], text_color="#FFFFFF",
-			font=self.font(22, "bold")
-		).grid(row=0, column=0, rowspan=2, padx=(0, 10))
-		ctk.CTkLabel(
-			brand_frame, text="FurLog", text_color="#FFFFFF",
-			font=self.font(21, "bold")
-		).grid(row=0, column=1, sticky="sw")
-		ctk.CTkLabel(
-			brand_frame, text="PET CARE RECORDS",
-			text_color=self.COLORS["sidebar_muted"], font=self.font(9, "bold")
-		).grid(row=1, column=1, sticky="nw")
+			brand_frame, text="", image=get_furlog_logo()
+		).grid(row=0, column=0)
 
 		navigation_items = self.get_navigation_items()
 		logout_row = len(navigation_items) + 1
