@@ -14,11 +14,11 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			INSERT INTO pets (name, species, breed, age, owner, created_at, vitamins, foods, needs, age_unit)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO pets (name, species, breed, age, owner, created_at, age_unit)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
 			""",
 			(pet.name, pet.species, pet.breed, pet.age, pet.owner, pet.created_at,
-			 pet.vitamins, pet.foods, pet.needs, pet.age_unit)
+			 pet.age_unit)
 		)
 		self.connection.commit()
 		pet.id = cursor.lastrowid
@@ -29,7 +29,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs, age_unit
+			SELECT id, name, species, breed, age, owner, created_at, age_unit
 			FROM pets
 			ORDER BY name COLLATE NOCASE ASC
 			"""
@@ -41,7 +41,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs, age_unit
+			SELECT id, name, species, breed, age, owner, created_at, age_unit
 			FROM pets
 			WHERE id = ?
 			""",
@@ -59,12 +59,11 @@ class PetManager:
 		cursor.execute(
 			"""
 			UPDATE pets
-			SET name = ?, species = ?, breed = ?, age = ?, owner = ?,
-			    vitamins = ?, foods = ?, needs = ?, age_unit = ?
+			SET name = ?, species = ?, breed = ?, age = ?, owner = ?, age_unit = ?
 			WHERE id = ?
 			""",
 			(pet.name, pet.species, pet.breed, pet.age, pet.owner,
-			 pet.vitamins, pet.foods, pet.needs, pet.age_unit, pet.id)
+			 pet.age_unit, pet.id)
 		)
 		self.connection.commit()
 		return cursor.rowcount > 0
@@ -82,7 +81,7 @@ class PetManager:
 		cursor = self.connection.cursor()
 		cursor.execute(
 			"""
-			SELECT id, name, species, breed, age, owner, created_at, vitamins, foods, needs, age_unit
+			SELECT id, name, species, breed, age, owner, created_at, age_unit
 			FROM pets
 			WHERE name LIKE ?
 			   OR species LIKE ?
@@ -104,8 +103,5 @@ class PetManager:
 			age=row[4],
 			owner=row[5],
 			created_at=row[6],
-			vitamins=row[7],
-			foods=row[8],
-			needs=row[9],
-			age_unit=row[10]
+			age_unit=row[7]
 		)

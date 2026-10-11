@@ -8,6 +8,7 @@ from database.database import DatabaseManager
 from gui.branding import get_furlog_logo
 from gui.pet_management import PetManagement
 from managers.grooming_manager import GroomingManager
+from managers.pet_care_manager import PetCareManager
 from managers.pet_manager import PetManager
 from reports.pdf_exporter import export_report_pdf
 
@@ -391,6 +392,7 @@ class Reports(ctk.CTkFrame):
 			database_manager = DatabaseManager(read_only=True)
 			pet_manager = PetManager(database_manager)
 			grooming_manager = GroomingManager(database_manager)
+			pet_care_manager = PetCareManager(database_manager)
 			if report_type == self.PET_REGISTRY:
 				pets = pet_manager.get_all_pets()
 				headers = ("Pet Name", "Species", "Breed", "Age", "Owner")
@@ -423,11 +425,16 @@ class Reports(ctk.CTkFrame):
 					if key != "pet_id" and value
 				}
 			else:
-				pets = pet_manager.get_all_pets()
-				headers = ("Pet Name", "Vitamins", "Foods", "Needs")
+				care_rows = pet_care_manager.get_all_report_rows()
+				headers = (
+					"Pet Name", "Special Care Needs", "Care Notes", "Foods", "Vitamins"
+				)
 				rows = [
-					(pet.name, pet.vitamins or "-", pet.foods or "-", pet.needs or "-")
-					for pet in pets
+					(
+						row[1], row[2] or "-", row[3] or "-",
+						row[4] or "-", row[5] or "-"
+					)
+					for row in care_rows
 				]
 		except Exception as error:
 			messagebox.showerror("Generate report failed", str(error))

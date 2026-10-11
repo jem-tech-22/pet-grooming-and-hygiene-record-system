@@ -3,6 +3,10 @@ from datetime import datetime
 from tkinter import messagebox
 
 from gui.branding import get_furlog_logo
+from gui.pet_care import PetCareSection
+from gui.supplies_inventory import SuppliesInventorySection
+from managers.inventory_manager import InventoryManager
+from managers.pet_care_manager import PetCareManager
 from managers.pet_manager import PetManager
 from models.pet import Pet
 
@@ -34,10 +38,10 @@ class PetManagement(ctk.CTkFrame):
         ("Breed", 13),
         ("Age", 6),
         ("Owner", 12),
-        ("Vitamins", 13),
-        ("Foods", 13),
-        ("Needs", 13),
         ("Action", 15)
+    )
+    INTERNAL_SECTIONS = (
+        "Pet Information", "Pet Care", "Supplies & Inventory"
     )
     TABLE_ROW_HEIGHT = 52
     NAVIGATION_ITEMS = (
@@ -53,16 +57,25 @@ class PetManagement(ctk.CTkFrame):
         "Dashboard", "Pet Management", "Grooming Records", "Grooming History",
         "Reports", "User Management"
     )
-    def __init__(self, master, pet_manager=None, on_navigate=None):
+    def __init__(
+        self, master, pet_manager=None, on_navigate=None,
+        pet_care_manager=None, inventory_manager=None
+    ):
         super().__init__(master, fg_color=self.COLORS["canvas"])
         self.pet_manager = pet_manager or PetManager()
+        database_manager = self.pet_manager.database_manager
+        self.pet_care_manager = pet_care_manager or PetCareManager(database_manager)
+        self.inventory_manager = inventory_manager or InventoryManager(database_manager)
         self.on_navigate = on_navigate
         self.selected_pet_id = None
         self.entries = {}
         self.metric_labels = {}
         self.pet_rows = {}
+        self.section_frames = {}
+        self.section_buttons = {}
 
         self.create_widgets()
+        self.database_managers = [database_manager]
         try:
             self.load_pets()
         except Exception as error:
@@ -150,7 +163,7 @@ class PetManagement(ctk.CTkFrame):
         )
         content.grid(row=0, column=1, padx=(30, 34), pady=(26, 28), sticky="nsew")
         content.grid_columnconfigure(0, weight=1)
-        content.grid_rowconfigure(4, weight=1)
+        content.grid_rowconfigure(2, weight=1)
 
         header = ctk.CTkFrame(content, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew")
@@ -175,13 +188,82 @@ class PetManagement(ctk.CTkFrame):
             font=self.font(12, "bold")
         ).grid(row=1, column=1, rowspan=2, padx=(20, 0), sticky="e")
 
-        self.create_metrics(content)
-        self.create_form_card(content)
-        self.create_table_card(content)
+        section_bar = ctk.CTkFrame(content, fg_color="transparent")
+        section_bar.grid(row=1, column=0, pady=(22, 16), sticky="ew")
+        for column in range(len(self.INTERNAL_SECTIONS)):
+            section_bar.grid_columnconfigure(column, weight=1, uniform="pet_sections")
+        for column, section_name in enumerate(self.INTERNAL_SECTIONS):
+            button = ctk.CTkButton(
+                section_bar, text=section_name,
+                command=lambda target=section_name: self.show_section(target),
+                height=38, corner_radius=8,
+                fg_color=self.COLORS["primary"] if column == 0 else self.COLORS["soft_gray"],
+                hover_color=self.COLORS["primary_hover"] if column == 0 else "#E1E9E3",
+                text_color="#FFFFFF" if column == 0 else self.COLORS["ink"],
+                font=self.font(11, "bold")
+            )
+            button.grid(row=0, column=column, padx=(0 if column == 0 else 6, 6), sticky="ew")
+            self.section_buttons[section_name] = button
+
+        self.section_host = ctk.CTkFrame(content, fg_color="transparent")
+        self.section_host.grid(row=2, column=0, sticky="nsew")
+        self.section_host.grid_columnconfigure(0, weight=1)
+        self.section_host.grid_rowconfigure(0, weight=1)
+
+        info_section = ctk.CTkFrame(self.section_host, fg_color="transparent")
+        info_section.grid(row=0, column=0, sticky="nsew")
+        info_section.grid_columnconfigure(0, weight=1)
+        info_section.grid_rowconfigure(2, weight=1)
+        self.section_frames["Pet Information"] = info_section
+        self.create_metrics(info_section)
+        self.create_form_card(info_section)
+        self.create_table_card(info_section)
+
+        self.section_frames["Pet Care"] = PetCareSection(
+            self.section_host, self.COLORS,
+            lambda size, weight="normal": self.font(size, weight),
+            self.pet_care_manager, self.inventory_manager
+        )
+        self.section_frames["Pet Care"].grid(row=0, column=0, sticky="nsew")
+        self.section_frames["Supplies & Inventory"] = SuppliesInventorySection(
+            self.section_host, self.COLORS,
+            lambda size, weight="normal": self.font(size, weight),
+            self.inventory_manager
+        )
+        self.section_frames["Supplies & Inventory"].grid(
+            row=0, column=0, sticky="nsew"
+        )
+
+        self.show_section("Pet Information")
+
+    def show_section(self, section_name):
+        section = self.section_frames.get(section_name)
+        if section is None:
+            return
+        section.tkraise()
+        for name, button in self.section_buttons.items():
+            active = name == section_name
+            button.configure(
+                fg_color=self.COLORS["primary"] if active else self.COLORS["soft_gray"],
+                hover_color=self.COLORS["primary_hover"] if active else "#E1E9E3",
+                text_color="#FFFFFF" if active else self.COLORS["ink"]
+            )
+        if section_name == "Pet Care":
+            section.refresh_data()
+        elif section_name == "Supplies & Inventory":
+            section.refresh_data()
+        elif section_name == "Pet Information":
+            self.load_pets()
+
+    def refresh_data(self):
+        """Refresh pet list and pet-dependent internal section choices."""
+        self.load_pets()
+        self.section_frames["Pet Care"].refresh_data()
+        self.section_frames["Supplies & Inventory"].refresh_data()
 
     def create_metrics(self, parent):
         metrics = ctk.CTkFrame(parent, fg_color="transparent")
-        metrics.grid(row=1, column=0, pady=(25, 20), sticky="ew")
+        metrics.grid(row=0, column=0, pady=(0, 18), sticky="ew")
         for column in range(3):
             metrics.grid_columnconfigure(column, weight=1)
 
@@ -220,11 +302,11 @@ class PetManagement(ctk.CTkFrame):
             parent, fg_color=self.COLORS["surface"], border_width=1,
             border_color=self.COLORS["line"], corner_radius=12
         )
-        form_card.grid(row=2, column=0, pady=(0, 18), sticky="ew")
+        form_card.grid(row=1, column=0, pady=(0, 18), sticky="ew")
         form_card.grid_columnconfigure(1, weight=1)
         form_card.grid_columnconfigure(3, weight=1)
         ctk.CTkLabel(
-            form_card, text="Pet information & Needs", text_color=self.COLORS["ink"],
+            form_card, text="Pet information", text_color=self.COLORS["ink"],
             font=self.font(15, "bold")
         ).grid(row=0, column=0, columnspan=4, padx=18, pady=(16, 3), sticky="w")
         ctk.CTkLabel(
@@ -235,10 +317,7 @@ class PetManagement(ctk.CTkFrame):
         fields = [
             ("Name", 2, 0, "Pet name"), ("Species", 2, 2, "e.g. Dog"),
             ("Breed", 3, 0, "Breed or mix"), ("Age", 3, 2, "Whole number"),
-            ("Owner", 4, 0, "Owner name"),
-            ("Vitamins", 4, 2, "Vitamins or supplements"),
-            ("Foods", 5, 0, "Food information"),
-            ("Needs", 5, 2, "Special care needs")
+            ("Owner", 4, 0, "Owner name")
         ]
         for field_name, row, column, placeholder in fields:
             ctk.CTkLabel(
@@ -282,8 +361,8 @@ class PetManagement(ctk.CTkFrame):
             self.entries[field_name.lower()] = entry
 
         actions = ctk.CTkFrame(form_card, fg_color="transparent")
-        actions.grid(row=6, column=0, columnspan=4, padx=18, pady=(12, 17), sticky="w")
-        self.create_action_button(actions, "Add pet", self.add_pet, 0, True)
+        actions.grid(row=5, column=0, columnspan=4, padx=18, pady=(12, 17), sticky="w")
+        self.create_action_button(actions, "Save pet", self.add_pet, 0, True)
         self.create_action_button(actions, "Update", self.update_pet, 1)
         self.create_action_button(actions, "Clear", self.clear_fields, 2)
         self.create_action_button(actions, "Delete", self.delete_pet, 3, danger=True)
@@ -310,8 +389,8 @@ class PetManagement(ctk.CTkFrame):
             parent, fg_color=self.COLORS["surface"], border_width=1,
             border_color=self.COLORS["line"], corner_radius=12
         )
-        table_card.grid(row=4, column=0, sticky="nsew")
-        table_card.configure(height=300)
+        table_card.grid(row=2, column=0, sticky="nsew")
+        table_card.configure(height=420)
         table_card.grid_propagate(False)
         table_card.grid_rowconfigure(2, weight=1)
         table_card.grid_columnconfigure(0, weight=1)
@@ -420,10 +499,7 @@ class PetManagement(ctk.CTkFrame):
             self.truncate_text(pet.species, 14),
             self.truncate_text(pet.breed or "-", 20),
             self.format_age(pet),
-            self.truncate_text(pet.owner, 20),
-            self.truncate_text(pet.vitamins or "-", 18),
-            self.truncate_text(pet.foods or "-", 18),
-            self.truncate_text(pet.needs or "-", 18)
+            self.truncate_text(pet.owner, 20)
         )
         row_widgets = []
         for column, value in enumerate(values):
@@ -519,9 +595,6 @@ class PetManagement(ctk.CTkFrame):
         age_text = self.entries["age"].get().strip()
         age_unit = self.age_unit_menu.get()
         owner = self.entries["owner"].get().strip()
-        vitamins = self.entries["vitamins"].get().strip()
-        foods = self.entries["foods"].get().strip()
-        needs = self.entries["needs"].get().strip()
         if not name or not species or not owner:
             messagebox.showwarning(
                 "Missing information", "Name, Species, and Owner are required."
@@ -539,7 +612,7 @@ class PetManagement(ctk.CTkFrame):
                 "Invalid age", "Age must be a non-negative whole number."
             )
             return None
-        return name, species, breed, age, owner, vitamins, foods, needs, age_unit
+        return name, species, breed, age, owner, age_unit
 
     def add_pet(self):
         values = self.get_form_values()
@@ -548,8 +621,7 @@ class PetManagement(ctk.CTkFrame):
         try:
             pet = Pet(
                 name=values[0], species=values[1], breed=values[2],
-                age=values[3], owner=values[4], vitamins=values[5],
-                foods=values[6], needs=values[7], age_unit=values[8]
+                age=values[3], owner=values[4], age_unit=values[5]
             )
             self.pet_manager.create_pet(pet)
             self.load_pets()
@@ -569,8 +641,7 @@ class PetManagement(ctk.CTkFrame):
             pet = Pet(
                 id=self.selected_pet_id, name=values[0], species=values[1],
                 breed=values[2], age=values[3], owner=values[4],
-                vitamins=values[5], foods=values[6], needs=values[7],
-                age_unit=values[8]
+                age_unit=values[5]
             )
             if self.pet_manager.update_pet(pet):
                 self.load_pets()
@@ -702,9 +773,6 @@ class PetManagement(ctk.CTkFrame):
                 ("Breed", pet.breed or "Not specified"),
                 ("Age", self.format_age(pet)),
                 ("Owner", pet.owner),
-                ("Vitamins", pet.vitamins or "Not specified"),
-                ("Foods", pet.foods or "Not specified"),
-                ("Needs", pet.needs or "Not specified"),
                 ("Created at", self.format_ph_time(pet.created_at))
             ]
             for row_number, (label, value) in enumerate(detail_values):
@@ -815,9 +883,6 @@ class PetManagement(ctk.CTkFrame):
             self.set_entry_value("age", pet.age)
             self.age_unit_menu.set(pet.age_unit)
             self.set_entry_value("owner", pet.owner)
-            self.set_entry_value("vitamins", pet.vitamins)
-            self.set_entry_value("foods", pet.foods)
-            self.set_entry_value("needs", pet.needs)
             for row_widgets in self.pet_rows.values():
                 self.set_row_border(row_widgets, self.COLORS["line"])
             self.set_row_border(self.pet_rows[pet.id], self.COLORS["primary"])

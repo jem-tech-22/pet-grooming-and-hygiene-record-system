@@ -24,10 +24,8 @@ class DatabaseManager:
             SELECT
                 (SELECT COUNT(*) FROM pets),
                 (SELECT COUNT(*) FROM grooming_records),
-                (SELECT COUNT(*) FROM pets
-                 WHERE foods IS NOT NULL AND TRIM(foods) <> ''),
-                (SELECT COUNT(*) FROM pets
-                 WHERE vitamins IS NOT NULL AND TRIM(vitamins) <> ''),
+                (SELECT COUNT(*) FROM inventory_items WHERE category = 'Food'),
+                (SELECT COUNT(*) FROM inventory_items WHERE category = 'Vitamin'),
                 (SELECT COUNT(*) FROM pets
                  WHERE LOWER(TRIM(COALESCE(species, ''))) IN ('dog', 'dogs')),
                 (SELECT COUNT(*) FROM pets
@@ -115,7 +113,103 @@ class DatabaseManager:
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pet_care (
+                pet_id INTEGER PRIMARY KEY,
+                special_care_needs TEXT NOT NULL DEFAULT '',
+                care_notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pet_id) REFERENCES pets (id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL CHECK (category IN ('Food', 'Vitamin')),
+                quantity INTEGER CHECK (quantity IS NULL OR quantity >= 0),
+                unit TEXT NOT NULL DEFAULT '',
+                reorder_level INTEGER NOT NULL DEFAULT 0 CHECK (reorder_level >= 0),
+                expiration_date TEXT,
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_category_name
+            ON inventory_items(category, name COLLATE NOCASE)
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pet_inventory_assignments (
+                pet_id INTEGER NOT NULL,
+                inventory_item_id INTEGER NOT NULL,
+                assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (pet_id, inventory_item_id),
+                FOREIGN KEY (pet_id) REFERENCES pets (id) ON DELETE CASCADE,
+                FOREIGN KEY (inventory_item_id)
+                    REFERENCES inventory_items (id) ON DELETE CASCADE
+            )
+        """)
+
         self.connection.commit()
+        self._migrate_legacy_pet_care_data()
+
+    def _migrate_legacy_pet_care_data(self):
+        """Copy old Foods, Vitamins, and Needs values without deleting them."""
+        cursor = self.connection.cursor()
+        if cursor.execute("PRAGMA user_version").fetchone()[0] >= 1:
+            return
+
+        cursor.execute("BEGIN IMMEDIATE")
+        try:
+            cursor.execute("SELECT id, foods, vitamins, needs FROM pets ORDER BY id")
+            for pet_id, foods, vitamins, needs in cursor.fetchall():
+                needs_value = (needs or "").strip()
+                if needs_value:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO pet_care
+                            (pet_id, special_care_needs, care_notes)
+                        VALUES (?, ?, '')
+                    """, (pet_id, needs_value))
+
+                for category, legacy_value in (("Food", foods), ("Vitamin", vitamins)):
+                    item_name = (legacy_value or "").strip()
+                    if not item_name:
+                        continue
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO inventory_items
+                            (name, category, quantity, unit, reorder_level,
+                             expiration_date, notes)
+                        VALUES (?, ?, NULL, '', 0, NULL, ?)
+                    """, (
+                        item_name,
+                        category,
+                        "Migrated from legacy pet field; stock quantity unknown."
+                    ))
+                    cursor.execute("""
+                        SELECT id FROM inventory_items
+                        WHERE category = ? AND name = ? COLLATE NOCASE
+                    """, (category, item_name))
+                    item_row = cursor.fetchone()
+                    if item_row is None:
+                        raise sqlite3.IntegrityError(
+                            f"Could not migrate legacy {category.lower()} value for pet {pet_id}"
+                        )
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO pet_inventory_assignments
+                            (pet_id, inventory_item_id)
+                        VALUES (?, ?)
+                    """, (pet_id, item_row[0]))
+
+            cursor.execute("PRAGMA user_version = 1")
+            self.connection.commit()
+        except Exception:
+            self.connection.rollback()
+            raise
 
     def get_table_names(self):
         """Return the application table names for a simple database check."""

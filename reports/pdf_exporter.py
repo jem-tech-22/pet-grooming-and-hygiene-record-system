@@ -70,7 +70,10 @@ def export_report_pdf(file_path, report_type, headers, rows, filters=None):
 			for row in rows
 		])
 		available_width = page_size[0] - document.leftMargin - document.rightMargin
-		wide_columns = {"notes", "vitamins", "foods", "needs"}
+		wide_columns = {
+			"notes", "vitamins", "foods", "needs", "special care needs",
+			"care notes", "assigned foods", "assigned vitamins"
+		}
 		weights = [2.3 if header.lower() in wide_columns else 1.0 for header in headers]
 		weight_total = sum(weights)
 		column_widths = [available_width * weight / weight_total for weight in weights]

@@ -71,7 +71,10 @@ class FurLogApp(ctk.CTk):
 		page = self.pages.get(page_name)
 		if page is None:
 			return
-		if page_name in ("Dashboard", "Grooming Records", "Grooming History", "Reports"):
+		if page_name in (
+			"Dashboard", "Pet Management", "Grooming Records",
+			"Grooming History", "Reports"
+		):
 			page.refresh_data()
 		elif page_name == "User Management":
 			page.refresh_users()
@@ -124,16 +127,19 @@ class FurLogApp(ctk.CTk):
 		self.show_login()
 
 	def _destroy_pages(self):
+		closed_database_managers = set()
 		for page in self.pages.values():
-			manager = getattr(page, "pet_manager", None)
-			if manager is None:
-				manager = getattr(page, "grooming_manager", None)
-			if manager is not None:
+			database_managers = getattr(page, "database_managers", None)
+			if database_managers is None:
+				manager = getattr(page, "pet_manager", None)
+				if manager is None:
+					manager = getattr(page, "grooming_manager", None)
 				database_manager = getattr(manager, "database_manager", None)
-				if database_manager is not None:
+				database_managers = [database_manager] if database_manager else []
+			for database_manager in database_managers:
+				if id(database_manager) not in closed_database_managers:
 					database_manager.close()
-				elif hasattr(manager, "close"):
-					manager.close()
+					closed_database_managers.add(id(database_manager))
 			page.destroy()
 		self.pages = {}
 

@@ -99,8 +99,8 @@ class Dashboard(ctk.CTkFrame):
 		summary_data = (
 			("total_pets", "TOTAL PETS", "0", "Registered profiles"),
 			("grooming_records", "GROOMING RECORDS", "0", "Recorded activities"),
-			("foods", "FOODS", "0", "Pets with food information"),
-			("vitamins", "VITAMINS", "0", "Pets with vitamin information")
+			("foods", "FOODS", "0", "Food catalog items"),
+			("vitamins", "VITAMINS", "0", "Vitamin catalog items")
 		)
 		for column, (key, title, value, description) in enumerate(summary_data):
 			card = ctk.CTkFrame(
