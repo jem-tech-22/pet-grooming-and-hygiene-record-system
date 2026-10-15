@@ -217,21 +217,16 @@ class SuppliesInventorySection(ctk.CTkFrame):
 		)
 
 	def refresh_data(self):
-		try:
-			items = self.inventory_manager.get_items()
-		except Exception as error:
-			messagebox.showerror("Load inventory failed", str(error), parent=self)
-			return
-		self.refresh_items()
+		self.refresh_items(error_title="Load inventory failed")
 
-	def refresh_items(self):
+	def refresh_items(self, error_title="Search inventory failed"):
 		category = self.category_filter.get()
 		if category == self.ALL_CATEGORIES:
 			category = None
 		try:
 			items = self.inventory_manager.get_items(self.search_entry.get(), category)
 		except Exception as error:
-			messagebox.showerror("Search inventory failed", str(error), parent=self)
+			messagebox.showerror(error_title, str(error), parent=self)
 			return
 		for row_widgets in self.item_rows.values():
 			for widget in row_widgets:

@@ -27,6 +27,7 @@ class FurLogApp(ctk.CTk):
 		self.user_manager = UserManager(DatabaseManager())
 		self.current_user = None
 		self.pages = {}
+		self._navigation_generation = 0
 		self.show_login()
 		self.protocol("WM_DELETE_WINDOW", self.close_app)
 
@@ -71,6 +72,15 @@ class FurLogApp(ctk.CTk):
 		page = self.pages.get(page_name)
 		if page is None:
 			return
+		self._navigation_generation += 1
+		generation = self._navigation_generation
+		page.tkraise()
+		self.title(f"FurLog - {page_name}")
+		self.after_idle(self._refresh_page_data, page_name, page, generation)
+
+	def _refresh_page_data(self, page_name, page, generation):
+		if generation != self._navigation_generation:
+			return
 		if page_name in (
 			"Dashboard", "Pet Management", "Grooming Records",
 			"Grooming History", "Reports"
@@ -78,8 +88,6 @@ class FurLogApp(ctk.CTk):
 			page.refresh_data()
 		elif page_name == "User Management":
 			page.refresh_users()
-		page.tkraise()
-		self.title(f"FurLog - {page_name}")
 
 	def confirm_logout(self):
 		dialog = ctk.CTkToplevel(self)

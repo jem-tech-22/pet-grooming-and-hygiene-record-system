@@ -73,6 +73,8 @@ class PetManagement(ctk.CTkFrame):
         self.pet_rows = {}
         self.section_frames = {}
         self.section_buttons = {}
+        self.active_section = "Pet Information"
+        self.loaded_pet_signature = None
 
         self.create_widgets()
         self.database_managers = [database_manager]
@@ -240,6 +242,7 @@ class PetManagement(ctk.CTkFrame):
         section = self.section_frames.get(section_name)
         if section is None:
             return
+        self.active_section = section_name
         section.tkraise()
         for name, button in self.section_buttons.items():
             active = name == section_name
@@ -258,8 +261,8 @@ class PetManagement(ctk.CTkFrame):
     def refresh_data(self):
         """Refresh pet list and pet-dependent internal section choices."""
         self.load_pets()
-        self.section_frames["Pet Care"].refresh_data()
-        self.section_frames["Supplies & Inventory"].refresh_data()
+        if self.active_section != "Pet Information":
+            self.section_frames[self.active_section].refresh_data()
 
     def create_metrics(self, parent):
         metrics = ctk.CTkFrame(parent, fg_color="transparent")
@@ -471,20 +474,30 @@ class PetManagement(ctk.CTkFrame):
         if pets is None:
             pets = self.pet_manager.get_all_pets()
         pets = list(pets)
-        for row_widgets in self.pet_rows.values():
-            for widget in row_widgets:
-                widget.destroy()
-        self.pet_rows.clear()
+        signature = tuple(
+            (
+                pet.id, pet.name, pet.species, pet.breed,
+                pet.age, pet.age_unit, pet.owner
+            )
+            for pet in pets
+        )
+        if signature != self.loaded_pet_signature:
+            for row_widgets in self.pet_rows.values():
+                for widget in row_widgets:
+                    widget.destroy()
+            self.pet_rows.clear()
 
-        for row_number, pet in enumerate(pets):
-            self.create_pet_row(row_number, pet)
+            for row_number, pet in enumerate(pets):
+                self.create_pet_row(row_number, pet)
+            self.update_metrics(pets)
+            self.loaded_pet_signature = signature
+
         if pets:
             self.empty_state_label.grid_remove()
         else:
             self.empty_state_label.grid(
                 row=1, column=0, columnspan=len(self.TABLE_COLUMNS), padx=20, pady=38
             )
-        self.update_metrics(pets)
         result_text = (
             f"{len(pets)} profile{'s' if len(pets) != 1 else ''}"
             if pets else "No pets found"
