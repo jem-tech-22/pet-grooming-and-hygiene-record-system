@@ -28,6 +28,7 @@ class FurLogApp(ctk.CTk):
 		self.current_user = None
 		self.pages = {}
 		self.page_factories = {}
+		self._navigation_skeleton = None
 		self._navigation_generation = 0
 		self.show_login()
 		self.protocol("WM_DELETE_WINDOW", self.close_app)
@@ -79,17 +80,136 @@ class FurLogApp(ctk.CTk):
 			factory = self.page_factories.get(page_name)
 			if factory is None:
 				return
-			page = factory()
-			self.pages[page_name] = page
-			page.grid(row=0, column=0, sticky="nsew")
+			self._navigation_generation += 1
+			generation = self._navigation_generation
+			self.title(f"FurLog - {page_name}")
+			self._show_navigation_skeleton(page_name)
+			self.after_idle(
+				self._create_page_after_skeleton, page_name, factory, generation
+			)
+			return
 		self._navigation_generation += 1
 		generation = self._navigation_generation
+		if self._navigation_skeleton is not None:
+			self._hide_navigation_skeleton()
 		page.tkraise()
 		self.title(f"FurLog - {page_name}")
 		self.after_idle(
 			self._refresh_page_data, page_name, page, generation,
 			not created or page_name in ("Dashboard", "Reports")
 		)
+
+	def _show_navigation_skeleton(self, page_name):
+		self._hide_navigation_skeleton()
+		colors = PetManagement.COLORS
+		skeleton = ctk.CTkFrame(
+			self, fg_color=colors["canvas"], corner_radius=0
+		)
+		skeleton.grid_columnconfigure(1, weight=1)
+		skeleton.grid_rowconfigure(0, weight=1)
+
+		sidebar = ctk.CTkFrame(
+			skeleton, width=224, corner_radius=0,
+			fg_color=colors["sidebar"]
+		)
+		sidebar.grid(row=0, column=0, sticky="nsew")
+		sidebar.grid_propagate(False)
+
+		content = ctk.CTkFrame(skeleton, fg_color="transparent")
+		content.grid(
+			row=0, column=1, padx=(30, 34), pady=(30, 28), sticky="nsew"
+		)
+		content.grid_columnconfigure(0, weight=1)
+		self._add_skeleton_block(
+			content, width=108, height=10, color=colors["line"],
+			row=0, column=0, sticky="w", pady=(2, 12)
+		)
+		self._add_skeleton_block(
+			content, width=280, height=28, color=colors["soft_gray"],
+			row=1, column=0, sticky="w", pady=(0, 10)
+		)
+		self._add_skeleton_block(
+			content, width=390, height=12, color=colors["line"],
+			row=2, column=0, sticky="w", pady=(0, 28)
+		)
+
+		cards = ctk.CTkFrame(content, fg_color="transparent")
+		cards.grid(row=3, column=0, pady=(0, 20), sticky="ew")
+		for column in range(4):
+			cards.grid_columnconfigure(column, weight=1, uniform="skeleton_cards")
+			card = ctk.CTkFrame(
+				cards, fg_color=colors["surface"], corner_radius=12,
+				border_width=1, border_color=colors["line"]
+			)
+			card.grid(row=0, column=column, padx=(0, 10), sticky="ew")
+			self._add_skeleton_block(
+				card, width=74, height=10, color=colors["line"],
+				padx=14, pady=(16, 10)
+			)
+			self._add_skeleton_block(
+				card, width=106, height=22, color=colors["soft_gray"],
+				padx=14, pady=(0, 16)
+			)
+
+		panel = ctk.CTkFrame(
+			content, fg_color=colors["canvas"], corner_radius=12
+		)
+		panel.grid(row=4, column=0, sticky="nsew")
+		panel.grid_columnconfigure(0, weight=1)
+		self._add_skeleton_block(
+			panel, width=200, height=16, color=colors["soft_gray"],
+			padx=18, pady=(18, 20)
+		)
+		for row in range(5):
+			self._add_skeleton_block(
+				panel, width=570 if row % 2 == 0 else 430, height=12,
+				color=colors["line"], padx=18, pady=(0, 16)
+			)
+
+		skeleton.place(relx=0, rely=0, relwidth=1, relheight=1)
+		skeleton.lift()
+		self._navigation_skeleton = skeleton
+		self.update_idletasks()
+
+	def _add_skeleton_block(
+		self, parent, width, height, color, row=None, column=0,
+		padx=0, pady=0, sticky=None
+	):
+		block = ctk.CTkFrame(
+			parent, width=width, height=height, fg_color=color,
+			corner_radius=max(4, height // 2)
+		)
+		if row is None:
+			block.pack(anchor="w", padx=padx, pady=pady)
+		else:
+			block.grid(row=row, column=column, padx=padx, pady=pady, sticky=sticky)
+		block.pack_propagate(False)
+		block.grid_propagate(False)
+		return block
+
+	def _create_page_after_skeleton(self, page_name, factory, generation):
+		if generation != self._navigation_generation or self.current_user is None:
+			return
+		try:
+			page = factory()
+			self.pages[page_name] = page
+			page.grid(row=0, column=0, sticky="nsew")
+			self._navigation_skeleton.lift()
+			self._refresh_page_data(
+				page_name, page, generation,
+				page_name in ("Dashboard", "Reports")
+			)
+			self.update_idletasks()
+			self._hide_navigation_skeleton()
+			page.tkraise()
+		except Exception:
+			self._hide_navigation_skeleton()
+			raise
+
+	def _hide_navigation_skeleton(self):
+		if self._navigation_skeleton is not None:
+			self._navigation_skeleton.destroy()
+			self._navigation_skeleton = None
 
 	def _refresh_page_data(self, page_name, page, generation, refresh_page=True):
 		if generation != self._navigation_generation:
@@ -146,6 +266,7 @@ class FurLogApp(ctk.CTk):
 
 	def logout(self):
 		self._navigation_generation += 1
+		self._hide_navigation_skeleton()
 		self._destroy_pages()
 		self.current_user = None
 		self.page_factories = {}

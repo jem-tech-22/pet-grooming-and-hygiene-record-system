@@ -221,27 +221,28 @@ class PetManagement(ctk.CTkFrame):
         self.create_form_card(info_section)
         self.create_table_card(info_section)
 
-        self.section_frames["Pet Care"] = PetCareSection(
-            self.section_host, self.COLORS,
-            lambda size, weight="normal": self.font(size, weight),
-            self.pet_care_manager, self.inventory_manager
-        )
-        self.section_frames["Pet Care"].grid(row=0, column=0, sticky="nsew")
-        self.section_frames["Supplies & Inventory"] = SuppliesInventorySection(
-            self.section_host, self.COLORS,
-            lambda size, weight="normal": self.font(size, weight),
-            self.inventory_manager
-        )
-        self.section_frames["Supplies & Inventory"].grid(
-            row=0, column=0, sticky="nsew"
-        )
-
         self.show_section("Pet Information")
 
     def show_section(self, section_name):
         section = self.section_frames.get(section_name)
-        if section is None:
-            return
+        created = section is None
+        if created:
+            if section_name == "Pet Care":
+                section = PetCareSection(
+                    self.section_host, self.COLORS,
+                    lambda size, weight="normal": self.font(size, weight),
+                    self.pet_care_manager, self.inventory_manager
+                )
+            elif section_name == "Supplies & Inventory":
+                section = SuppliesInventorySection(
+                    self.section_host, self.COLORS,
+                    lambda size, weight="normal": self.font(size, weight),
+                    self.inventory_manager
+                )
+            else:
+                return
+            self.section_frames[section_name] = section
+            section.grid(row=0, column=0, sticky="nsew")
         self.active_section = section_name
         section.tkraise()
         for name, button in self.section_buttons.items():
@@ -251,9 +252,7 @@ class PetManagement(ctk.CTkFrame):
                 hover_color=self.COLORS["primary_hover"] if active else "#E1E9E3",
                 text_color="#FFFFFF" if active else self.COLORS["ink"]
             )
-        if section_name == "Pet Care":
-            section.refresh_data()
-        elif section_name == "Supplies & Inventory":
+        if not created and section_name in ("Pet Care", "Supplies & Inventory"):
             section.refresh_data()
         elif section_name == "Pet Information":
             self.load_pets()
