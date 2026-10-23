@@ -21,7 +21,7 @@ class PetCareManager:
 	def get_pet_options(self):
 		cursor = self.connection.cursor()
 		cursor.execute("""
-			SELECT id, name, owner FROM pets
+			SELECT id, name, species, owner FROM pets
 			ORDER BY name COLLATE NOCASE, id
 		""")
 		return cursor.fetchall()

@@ -27,6 +27,7 @@ class FurLogApp(ctk.CTk):
 		self.user_manager = UserManager(DatabaseManager())
 		self.current_user = None
 		self.pages = {}
+		self.page_factories = {}
 		self._navigation_generation = 0
 		self.show_login()
 		self.protocol("WM_DELETE_WINDOW", self.close_app)
@@ -42,19 +43,22 @@ class FurLogApp(ctk.CTk):
 		self.current_user = user
 		self.login_screen.destroy()
 		self.login_screen = None
-		self.pages = {
-			"Dashboard": Dashboard(self, on_navigate=self.show_page),
-			"Pet Management": PetManagement(self, on_navigate=self.show_page),
-			"Grooming Records": GroomingRecords(self, on_navigate=self.show_page),
-			"Grooming History": GroomingHistory(self, on_navigate=self.show_page),
-			"Reports": Reports(self, on_navigate=self.show_page)
+		self.pages = {}
+		self.page_factories = {
+			"Dashboard": lambda: Dashboard(self, on_navigate=self.show_page),
+			"Pet Management": lambda: PetManagement(self, on_navigate=self.show_page),
+			"Grooming Records": lambda: GroomingRecords(
+				self, on_navigate=self.show_page
+			),
+			"Grooming History": lambda: GroomingHistory(
+				self, on_navigate=self.show_page
+			),
+			"Reports": lambda: Reports(self, on_navigate=self.show_page)
 		}
 		if user.role == "Administrator":
-			self.pages["User Management"] = UserManagement(
+			self.page_factories["User Management"] = lambda: UserManagement(
 				self, self.user_manager, on_navigate=self.show_page
 			)
-		for page in self.pages.values():
-			page.grid(row=0, column=0, sticky="nsew")
 		self.show_page("Dashboard")
 
 	def show_page(self, page_name):
@@ -70,16 +74,27 @@ class FurLogApp(ctk.CTk):
 			)
 			return
 		page = self.pages.get(page_name)
+		created = page is None
 		if page is None:
-			return
+			factory = self.page_factories.get(page_name)
+			if factory is None:
+				return
+			page = factory()
+			self.pages[page_name] = page
+			page.grid(row=0, column=0, sticky="nsew")
 		self._navigation_generation += 1
 		generation = self._navigation_generation
 		page.tkraise()
 		self.title(f"FurLog - {page_name}")
-		self.after_idle(self._refresh_page_data, page_name, page, generation)
+		self.after_idle(
+			self._refresh_page_data, page_name, page, generation,
+			not created or page_name in ("Dashboard", "Reports")
+		)
 
-	def _refresh_page_data(self, page_name, page, generation):
+	def _refresh_page_data(self, page_name, page, generation, refresh_page=True):
 		if generation != self._navigation_generation:
+			return
+		if not refresh_page:
 			return
 		if page_name in (
 			"Dashboard", "Pet Management", "Grooming Records",
@@ -130,8 +145,10 @@ class FurLogApp(ctk.CTk):
 		self.logout()
 
 	def logout(self):
+		self._navigation_generation += 1
 		self._destroy_pages()
 		self.current_user = None
+		self.page_factories = {}
 		self.show_login()
 
 	def _destroy_pages(self):
@@ -152,6 +169,7 @@ class FurLogApp(ctk.CTk):
 		self.pages = {}
 
 	def close_app(self):
+		self._navigation_generation += 1
 		self._destroy_pages()
 		self.user_manager.close()
 		self.destroy()

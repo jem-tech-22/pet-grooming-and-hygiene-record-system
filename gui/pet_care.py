@@ -150,8 +150,8 @@ class PetCareSection(ctk.CTkFrame):
 			messagebox.showerror("Load pets failed", str(error), parent=self)
 			return
 		self.pet_id_by_option = {
-			f"{name} (Owner: {owner}) - ID: {pet_id}": pet_id
-			for pet_id, name, owner in pet_options
+			f"{species} - {name} (Owner: {owner}) - ID: {pet_id}": pet_id
+			for pet_id, name, species, owner in pet_options
 		}
 		options = list(self.pet_id_by_option) or ["No pets registered"]
 		self.refresh_supply_dropdowns()
